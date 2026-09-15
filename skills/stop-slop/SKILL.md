@@ -195,6 +195,15 @@ If a sentence says something is important/deep/structural without showing the sp
 
 ---
 
+## Word and phrase bans live elsewhere
+
+This skill is about **shape** — sentence rhythm, rhetorical structure, paragraph movement.
+Individual banned words and phrases are one list, held by the copy-editing skill:
+[`../copy-editing/references/banned-phrases.md`](../copy-editing/references/banned-phrases.md).
+
+If you are asking "is this word allowed", go there. If you are asking "why does this
+paragraph feel manufactured", stay here.
+
 ## Structures to Avoid
 
 ### Binary Contrasts
