@@ -1,7 +1,7 @@
 {
   "name": "marketing-skills",
-  "description": "Marketing and content practice: writing and editing marketing copy, designing a landing page, auditing a site's technical SEO, adding structured data, tearing down a competitor's site for evidence, and stripping the patterns that make prose read as AI-written.",
-  "version": "0.1.0",
+  "description": "Marketing and content practice: writing and editing marketing copy, designing a landing page, auditing a site's technical SEO, adding structured data, tearing down a competitor's site for evidence, and stripping the patterns that make prose read as AI-written. Carries one consolidated banned-phrases list.",
+  "version": "0.2.0",
   "author": {
     "name": "Ibraheem Abdul-Malik",
     "url": "https://github.com/ibraheem4"
