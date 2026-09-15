@@ -257,16 +257,11 @@ For claims that need qualification or aren't absolute:
 
 ---
 
-## Transitions to Avoid (AI Tells)
+## Transitions to avoid
 
-These phrases are overused in AI-generated content:
+Banned transitions live with every other banned phrase, in one list:
+[`../../copy-editing/references/banned-phrases.md`](../../copy-editing/references/banned-phrases.md).
 
-- "That being said,..."
-- "It's worth noting that..."
-- "At its core,..."
-- "In today's digital landscape,..."
-- "When it comes to the realm of..."
-- "This begs the question..."
-- "Let's delve into..."
-
-See the seo-audit skill's `references/ai-writing-detection.md` for a complete list of AI writing tells.
+Check there before reaching for a connector. The short version: if it announces that a
+transition is happening ("That being said", "With that in mind", "At its core"), cut it and
+let the sentences meet.
