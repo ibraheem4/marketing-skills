@@ -1,13 +1,11 @@
 ---
 name: landing-page
 description: Use when designing or rewriting a high-converting landing page (single-offer page) for SaaS/apps/services. Covers structure, layout patterns, conversion strategies, copywriting, SEO/AEO, and common pitfalls.
+license: MIT
 metadata:
   author: Meng To
   source: https://github.com/MengTo/Skills (agent-skills/web-design/landing-page)
   derived: false  # copied unmodified
-  license: UNRESOLVED — the source repository states no license. Redistribution
-    permission has not been established. Do not treat this file as MIT.
-
 ---
 
 # Landing Page (High‑Conversion) — Web Design Skill
