@@ -8,11 +8,45 @@ Marketing and content skills for Claude Code. Companion to [agent-skills](https:
 |-------|----------|
 | `copywriting` | Writing or rewriting copy for a page — homepage, landing, pricing, feature, about |
 | `copy-editing` | Editing copy that already exists, in focused passes |
-| `landing-page` | Designing a single-offer page: structure, layout, conversion, SEO |
-| `seo-audit` | Diagnosing why a site is not ranking — technical and on-page |
-| `schema-markup` | Adding or fixing JSON-LD structured data |
-| `site-teardown` | Pulling a competitor's actual decisions apart on evidence, before copying them |
 | `stop-slop` | Removing the patterns that make prose read as AI-written |
+| `landing-page` | Designing a single-offer page: structure, layout, conversion, SEO |
+| `cro` | Improving conversion on any page or form |
+| `popups` | Popups, modals, overlays, slide-ins and banners |
+| `emails` | Email sequences, drip campaigns and lifecycle flows |
+| `ab-testing` | Planning or implementing an experiment |
+| `analytics` | Setting up or auditing tracking and measurement |
+| `seo-audit` | Diagnosing why a site is not ranking — technical and on-page |
+| `ai-seo` | Getting cited by AI assistants and answer engines |
+| `programmatic-seo` | SEO pages at scale from templates and data |
+| `schema` | Adding or fixing JSON-LD structured data |
+| `marketing-psychology` | Why a change moves behaviour, not just what to change |
+| `site-teardown` | Pulling a competitor's actual decisions apart on evidence |
+
+Every cross-reference between these resolves to a skill that is here. Pointers to skills
+outside this set have been removed rather than left dangling.
+
+## Provenance and license
+
+Most of this set is other people's work, used under MIT and credited here. Each skill's
+frontmatter carries its own `author`, `source` and whether it was modified.
+
+| Skills | Origin | License |
+|---|---|---|
+| `ab-testing`, `ai-seo`, `analytics`, `cro`, `emails`, `marketing-psychology`, `popups`, `programmatic-seo` | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) — **copied unmodified** | MIT, © 2025 Corey Haines |
+| `copywriting`, `copy-editing`, `seo-audit`, `schema` | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) — **modified** | MIT, © 2025 Corey Haines |
+| `stop-slop` | [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) — modified | MIT, © 2025 Hardik Pandya |
+| `landing-page` | [MengTo/Skills](https://github.com/MengTo/Skills) — copied unmodified | ⚠️ **none stated — see below** |
+| `site-teardown` | original | MIT, © 2026 Ibraheem Abdul-Malik |
+
+Corey Haines' library is the substantial majority of this set and is worth using directly —
+it has 50 skills where this has 15. This repository exists because a smaller, self-consistent
+subset is easier to reason about alongside `agent-skills`, not because it improves on the
+original.
+
+> [!warning]
+> `landing-page` is reproduced from a repository that states no license, which means default
+> copyright and no granted right to redistribute. It is included here pending permission from
+> the author. If you are vendoring this set, drop that skill or seek permission yourself.
 
 ## Install
 
@@ -23,21 +57,3 @@ Marketing and content skills for Claude Code. Companion to [agent-skills](https:
 
 Then restart Claude Code. A plugin's install directory is keyed by the version string, so a
 version bump is what triggers a re-fetch — pushing alone does not.
-
-## Known gaps
-
-Three skills reference siblings that do not exist yet, so those pointers dead-end:
-
-- `copywriting` → `email-sequence`, `popup-cro`
-- `seo-audit` → `programmatic-seo`
-
-They are left in place rather than edited out, because they describe the intended shape of the
-set. Writing them is the obvious next addition.
-
-## Conventions
-
-One directory per skill under `skills/`, each with a `SKILL.md` carrying `name`, `description`
-and a `metadata.version`. Supporting material goes in that skill's `references/`.
-
-A skill's `description` is what decides whether it triggers, so it should name the phrases a
-person would actually type — not summarise the contents.

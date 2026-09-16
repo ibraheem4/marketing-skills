@@ -1,7 +1,11 @@
 ---
 name: copywriting
-description: When the user wants to write, rewrite, or improve marketing copy for any page — including homepage, landing pages, pricing pages, feature pages, about pages, or product pages. Also use when the user says "write copy for," "improve this copy," "rewrite this page," "marketing copy," "headline help," or "CTA copy." For email copy, see email-sequence. For popup copy, see popup-cro.
+description: When the user wants to write, rewrite, or improve marketing copy for any page — including homepage, landing pages, pricing pages, feature pages, about pages, or product pages. Also use when the user says "write copy for," "improve this copy," "rewrite this page," "marketing copy," "headline help," or "CTA copy." For email copy, see emails. For popup copy, see popups.
+license: MIT
 metadata:
+  author: Corey Haines
+  source: https://github.com/coreyhaines31/marketingskills
+  derived: true   # modified from the original
   version: 1.0.0
 ---
 
@@ -246,7 +250,7 @@ For headlines and CTAs, provide 2-3 options:
 ## Related Skills
 
 - **copy-editing**: For polishing existing copy (use after your draft)
-- **page-cro**: If page structure/strategy needs work, not just copy
-- **email-sequence**: For email copywriting
-- **popup-cro**: For popup and modal copy
-- **ab-test-setup**: To test copy variations
+- **cro**: If page structure/strategy needs work, not just copy
+- **emails**: For email copywriting
+- **popups**: For popup and modal copy
+- **ab-testing**: To test copy variations

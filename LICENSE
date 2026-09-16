@@ -1,6 +1,15 @@
 MIT License
 
 Copyright (c) 2026 Ibraheem Abdul-Malik
+Copyright (c) 2025 Corey Haines
+Copyright (c) 2025 Hardik Pandya
+
+Portions of this repository are copied from or derived from other MIT-licensed
+works. Their notices are retained above and their provenance is recorded per
+skill in README.md and in each skill's frontmatter:
+
+  - coreyhaines31/marketingskills  — Copyright (c) 2025 Corey Haines
+  - hardikpandya/stop-slop         — Copyright (c) 2025 Hardik Pandya
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
