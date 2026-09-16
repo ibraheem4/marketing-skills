@@ -35,18 +35,13 @@ frontmatter carries its own `author`, `source` and whether it was modified.
 | `ab-testing`, `ai-seo`, `analytics`, `cro`, `emails`, `marketing-psychology`, `popups`, `programmatic-seo` | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) — **copied unmodified** | MIT, © 2025 Corey Haines |
 | `copywriting`, `copy-editing`, `seo-audit`, `schema` | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) — **modified** | MIT, © 2025 Corey Haines |
 | `stop-slop` | [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) — modified | MIT, © 2025 Hardik Pandya |
-| `landing-page` | [MengTo/Skills](https://github.com/MengTo/Skills) — copied unmodified | ⚠️ **none stated — see below** |
+| `landing-page` | [MengTo/Skills](https://github.com/MengTo/Skills) — copied unmodified | MIT, © 2026 Meng To |
 | `site-teardown` | original | MIT, © 2026 Ibraheem Abdul-Malik |
 
 Corey Haines' library is the substantial majority of this set and is worth using directly —
 it has 50 skills where this has 15. This repository exists because a smaller, self-consistent
 subset is easier to reason about alongside `agent-skills`, not because it improves on the
 original.
-
-> [!warning]
-> `landing-page` is reproduced from a repository that states no license, which means default
-> copyright and no granted right to redistribute. It is included here pending permission from
-> the author. If you are vendoring this set, drop that skill or seek permission yourself.
 
 ## Install
 
