@@ -1,7 +1,11 @@
 ---
-name: schema-markup
+name: schema
 description: When the user wants to add, fix, or optimize schema markup and structured data on their site. Also use when the user mentions "schema markup," "structured data," "JSON-LD," "rich snippets," "schema.org," "FAQ schema," "product schema," "review schema," or "breadcrumb schema." For broader SEO issues, see seo-audit.
+license: MIT
 metadata:
+  author: Corey Haines
+  source: https://github.com/coreyhaines31/marketingskills
+  derived: true   # modified from the original
   version: 1.0.0
 ---
 

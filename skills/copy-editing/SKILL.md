@@ -1,7 +1,11 @@
 ---
 name: copy-editing
 description: "When the user wants to edit, review, or improve existing marketing copy. Also use when the user mentions 'edit this copy,' 'review my copy,' 'copy feedback,' 'proofread,' 'polish this,' 'make this better,' or 'copy sweep.' This skill provides a systematic approach to editing marketing copy through multiple focused passes."
+license: MIT
 metadata:
+  author: Corey Haines
+  source: https://github.com/coreyhaines31/marketingskills
+  derived: true   # modified from the original
   version: 1.0.0
 ---
 
@@ -431,9 +435,9 @@ This iterative process ensures each edit doesn't create new problems while respe
 ## Related Skills
 
 - **copywriting**: For writing new copy from scratch (use this skill to edit after your first draft is complete)
-- **page-cro**: For broader page optimization beyond copy
+- **cro**: For broader page optimization beyond copy
 - **marketing-psychology**: For understanding why certain edits improve conversion
-- **ab-test-setup**: For testing copy variations
+- **ab-testing**: For testing copy variations
 
 ---
 
@@ -444,4 +448,4 @@ This iterative process ensures each edit doesn't create new problems while respe
 | Writing new page copy from scratch | copywriting |
 | Reviewing and improving existing copy | copy-editing (this skill) |
 | Editing copy you just wrote | copy-editing (this skill) |
-| Structural or strategic page changes | page-cro |
+| Structural or strategic page changes | cro |

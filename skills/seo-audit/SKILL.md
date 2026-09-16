@@ -1,7 +1,11 @@
 ---
 name: seo-audit
-description: When the user wants to audit, review, or diagnose SEO issues on their site. Also use when the user mentions "SEO audit," "technical SEO," "why am I not ranking," "SEO issues," "on-page SEO," "meta tags review," or "SEO health check." For building pages at scale to target keywords, see programmatic-seo. For adding structured data, see schema-markup.
+description: When the user wants to audit, review, or diagnose SEO issues on their site. Also use when the user mentions "SEO audit," "technical SEO," "why am I not ranking," "SEO issues," "on-page SEO," "meta tags review," or "SEO health check." For building pages at scale to target keywords, see programmatic-seo. For adding structured data, see schema.
+license: MIT
 metadata:
+  author: Corey Haines
+  source: https://github.com/coreyhaines31/marketingskills
+  derived: true   # modified from the original
   version: 1.0.0
 ---
 
@@ -406,6 +410,6 @@ Same format as above
 
 - **ai-seo**: For optimizing content for AI search engines (AEO, GEO, LLMO)
 - **programmatic-seo**: For building SEO pages at scale
-- **schema-markup**: For implementing structured data
-- **page-cro**: For optimizing pages for conversion (not just ranking)
-- **analytics-tracking**: For measuring SEO performance
+- **schema**: For implementing structured data
+- **cro**: For optimizing pages for conversion (not just ranking)
+- **analytics**: For measuring SEO performance
