@@ -1,6 +1,6 @@
 ---
 name: site-teardown
-description: Tear down a competitor or reference marketing site so its actual decisions can be copied or rejected on evidence. Use when the user names a site to emulate, asks "what does X do on their homepage," compares themselves to a competitor, or is choosing a visual direction from references. Also use before writing marketing copy or designing a marketing page when references exist. Covers assets, palette, type, motion, page structure, proof density and copy register. Do not use for SEO ranking audits (see seo-audit) or for auditing your own site's structured data (see schema).
+description: Tear down a competitor or reference marketing site so its actual decisions can be copied or rejected on evidence. Use when the user names a site to emulate, asks "what does X do on their homepage," compares themselves to a competitor, or is choosing a visual direction from references. Also use before writing marketing copy or designing a marketing page when references exist. Covers assets, palette, type, motion, page structure, proof density and copy register. For extracting design tokens, typography scales and a component spec you can implement from, see analyze-website-style. Do not use for SEO ranking audits (see seo-audit) or for auditing your own site's structured data (see schema).
 metadata:
   version: 1.0.0
 ---

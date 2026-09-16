@@ -20,6 +20,7 @@ Marketing and content skills for Claude Code. Companion to [agent-skills](https:
 | `programmatic-seo` | SEO pages at scale from templates and data |
 | `schema` | Adding or fixing JSON-LD structured data |
 | `marketing-psychology` | Why a change moves behaviour, not just what to change |
+| `analyze-website-style` | Turning a reference site into design tokens and a component spec |
 | `site-teardown` | Pulling a competitor's actual decisions apart on evidence |
 
 Every cross-reference between these resolves to a skill that is here. Pointers to skills
