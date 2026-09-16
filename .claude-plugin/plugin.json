@@ -1,7 +1,7 @@
 {
   "name": "marketing-skills",
   "description": "Marketing and content practice: writing and editing marketing copy, stripping the patterns that make prose read as AI-written, designing a landing page, conversion optimization for pages and forms, popups, email sequences, A/B testing, analytics and measurement, technical SEO audits, AI/answer-engine SEO, programmatic SEO, structured data, marketing psychology, and tearing down a competitor's site for evidence. Most skills are from Corey Haines' MIT-licensed marketingskills library; see README for per-skill provenance.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "Ibraheem Abdul-Malik",
     "url": "https://github.com/ibraheem4"
