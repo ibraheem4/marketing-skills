@@ -10,7 +10,8 @@ import assert from 'node:assert/strict'
 import {
   parseRobots, isAllowed, checkNoJs, checkStructuredData,
   checkFirstParagraph, assertFetchable, urlsFromSitemap, stripToText,
-} from '../scripts/aeo-engine.mjs'
+  checkFoundations, checkAcrossPages,
+} from '../scripts/visibility-engine.mjs'
 
 test('parseRobots collects sitemaps and per-agent groups', () => {
   const r = parseRobots(`
@@ -139,4 +140,79 @@ test('urlsFromSitemap extracts locs up to the limit', () => {
   const xml = `<urlset>${['a', 'b', 'c'].map((s) => `<loc>https://x.test/${s}</loc>`).join('')}</urlset>`
   assert.equal(urlsFromSitemap(xml, 2).length, 2)
   assert.deepEqual(urlsFromSitemap(xml, 10), ['https://x.test/a', 'https://x.test/b', 'https://x.test/c'])
+})
+
+// ── foundations ────────────────────────────────────────────────────────────
+
+test('checkFoundations catches a missing lang attribute', () => {
+  const r = checkFoundations('<html><body><p>x</p></body></html>')
+  assert.ok(r.findings.some((f) => f.code === 'lang-missing'))
+  assert.equal(r.lang, null)
+})
+
+test('checkFoundations accepts a declared lang and reads hreflang', () => {
+  const html = `<html lang="en"><head>
+    <link rel="alternate" hreflang="fr" href="/fr">
+    <link rel="alternate" hreflang="ar" href="/ar">
+  </head><body><p>${'word '.repeat(300)}</p></body></html>`
+  const r = checkFoundations(html)
+  assert.equal(r.lang, 'en')
+  assert.deepEqual(r.hreflang, ['fr', 'ar'])
+  assert.equal(r.findings.some((f) => f.code === 'lang-missing'), false)
+})
+
+test('checkFoundations flags a skipped heading level', () => {
+  const r = checkFoundations('<html lang="en"><h1>A</h1><h4>B</h4></html>')
+  const f = r.findings.find((x) => x.code === 'heading-skipped')
+  assert.ok(f)
+  assert.match(f.message, /h1 jumps to h4/)
+})
+
+test('checkFoundations does not flag a legal heading order', () => {
+  const r = checkFoundations('<html lang="en"><h1>A</h1><h2>B</h2><h3>C</h3><h2>D</h2></html>')
+  assert.equal(r.findings.some((x) => x.code === 'heading-skipped'), false)
+})
+
+test('checkFoundations counts images missing alt, and alt="" counts as present', () => {
+  const r = checkFoundations('<html lang="en"><img src=a><img src=b alt=""><img src=c alt="x"></html>')
+  const f = r.findings.find((x) => x.code === 'img-alt-missing')
+  assert.equal(r.images, 3)
+  assert.equal(r.imagesWithoutAlt, 1)
+  assert.match(f.message, /1 of 3/)
+})
+
+test('checkFoundations flags multiple h1 elements', () => {
+  const r = checkFoundations('<html lang="en"><h1>A</h1><h1>B</h1></html>')
+  assert.ok(r.findings.some((x) => x.code === 'h1-multiple'))
+  assert.equal(r.h1Count, 2)
+})
+
+test('checkAcrossPages finds duplicate titles and descriptions', () => {
+  const pages = [
+    { url: 'https://x.test/a', head: { title: 'Same', description: 'D' }, lang: 'en' },
+    { url: 'https://x.test/b', head: { title: 'Same', description: 'D' }, lang: 'en' },
+  ]
+  const f = checkAcrossPages(pages, 'https://x.test')
+  assert.ok(f.some((x) => x.code === 'title-duplicate'))
+  assert.ok(f.some((x) => x.code === 'description-duplicate'))
+})
+
+test('checkAcrossPages flags a canonical pointing at another page', () => {
+  const pages = [{ url: 'https://x.test/a', head: { canonical: 'https://x.test/b' }, lang: 'en' }]
+  const f = checkAcrossPages(pages, 'https://x.test')
+  assert.ok(f.some((x) => x.code === 'canonical-mismatch'))
+})
+
+test('checkAcrossPages tolerates a trailing-slash-only canonical difference', () => {
+  const pages = [{ url: 'https://x.test/a', head: { canonical: 'https://x.test/a/' }, lang: 'en' }]
+  const f = checkAcrossPages(pages, 'https://x.test')
+  assert.equal(f.some((x) => x.code === 'canonical-mismatch'), false)
+})
+
+test('checkAcrossPages flags inconsistent lang across pages', () => {
+  const pages = [
+    { url: 'https://x.test/a', head: {}, lang: 'en' },
+    { url: 'https://x.test/b', head: {}, lang: 'en-US' },
+  ]
+  assert.ok(checkAcrossPages(pages, 'https://x.test').some((x) => x.code === 'lang-inconsistent'))
 })

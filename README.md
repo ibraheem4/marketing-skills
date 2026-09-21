@@ -17,7 +17,7 @@ Marketing and content skills for Claude Code. Companion to [agent-skills](https:
 | `analytics` | Setting up or auditing tracking and measurement |
 | `seo-audit` | Diagnosing why a site is not ranking — technical and on-page |
 | `ai-seo` | Getting cited by AI assistants and answer engines |
-| `aeo-scan` | Measuring AI-search visibility — runs the checks and emits a dated artefact |
+| `ai-visibility-scan` | Measuring SEO/AEO/GEO by fetching the site — foundations plus answer-engine readiness, with a dated artefact |
 | `programmatic-seo` | SEO pages at scale from templates and data |
 | `schema` | Adding or fixing JSON-LD structured data |
 | `marketing-psychology` | Why a change moves behaviour, not just what to change |
@@ -39,7 +39,7 @@ frontmatter carries its own `author`, `source` and whether it was modified.
 | `copywriting`, `copy-editing`, `seo-audit`, `schema` | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) — **modified** | MIT, © 2025 Corey Haines |
 | `stop-slop` | [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) — modified | MIT, © 2025 Hardik Pandya |
 | `landing-page` | [MengTo/Skills](https://github.com/MengTo/Skills) — copied unmodified | MIT, © 2026 Meng To |
-| `aeo-scan` | Original — written for this repository | MIT, © 2026 Ibraheem Abdul-Malik |
+| `ai-visibility-scan` | Original — written for this repository | MIT, © 2026 Ibraheem Abdul-Malik |
 | `site-teardown` | original | MIT, © 2026 Ibraheem Abdul-Malik |
 
 Corey Haines' library is the substantial majority of this set and is worth using directly —

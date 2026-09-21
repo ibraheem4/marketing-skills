@@ -48,7 +48,7 @@ const DEFAULTS = {
   maxRedirects: 5,
   maxPages: 25,
   allowLocal: false,
-  userAgent: 'Mozilla/5.0 (compatible; aeo-scan/0.1; +https://github.com/ibraheem4/marketing-skills)',
+  userAgent: 'Mozilla/5.0 (compatible; ai-visibility-scan/0.2; +https://github.com/ibraheem4/marketing-skills)',
 }
 
 export async function get(url, opts = {}) {
@@ -245,6 +245,85 @@ export function checkStructuredData(html) {
   return { findings, blocks, types: blocks.filter((b) => b.valid).map((b) => b.type), head, og, twitter: tw }
 }
 
+// ── foundations — the SEO layer answer-engine work sits on top of ──────────
+//
+// These are cheap: the bytes are already fetched. They exist because a scan
+// that reports "0 failures" on a page whose <html> has no lang attribute is
+// not measuring the site, it is measuring its own blind spot. That happened.
+
+export function checkFoundations(html) {
+  const findings = []
+
+  const htmlTag = html.match(/<html\b[^>]*>/i)?.[0] ?? ''
+  const lang = attr(htmlTag, 'lang')
+  if (!lang) findings.push({ level: 'fail', code: 'lang-missing', message: '<html> has no lang attribute' })
+
+  const hreflang = [...html.matchAll(/<link\b[^>]*hreflang\s*=\s*["']([^"']+)["'][^>]*>/gi)].map((m) => m[1])
+
+  // Heading order. A skipped level is a structural claim that is false, and
+  // extractors lean on the hierarchy to decide what a passage is about.
+  const headings = [...html.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)]
+    .map((m) => ({ level: Number(m[1]), text: stripToText(m[2]) }))
+  const h1s = headings.filter((h) => h.level === 1)
+  if (h1s.length > 1) findings.push({ level: 'warn', code: 'h1-multiple', message: `${h1s.length} <h1> elements` })
+  let prev = 0
+  for (const h of headings) {
+    if (prev && h.level > prev + 1) {
+      findings.push({ level: 'warn', code: 'heading-skipped', message: `h${prev} jumps to h${h.level} at "${h.text.slice(0, 40)}"` })
+      break
+    }
+    prev = h.level
+  }
+
+  // Images without alt. Counted rather than listed — a gallery would flood it.
+  const imgs = [...html.matchAll(/<img\b[^>]*>/gi)].map((m) => m[0])
+  const noAlt = imgs.filter((t) => attr(t, 'alt') === null)
+  if (noAlt.length) findings.push({ level: 'warn', code: 'img-alt-missing', message: `${noAlt.length} of ${imgs.length} <img> without alt` })
+
+  const words = stripToText(html).split(/\s+/).filter(Boolean).length
+  if (words < 250) findings.push({ level: 'warn', code: 'thin-content', message: `${words} words` })
+
+  return { findings, lang, hreflang, headings: headings.length, h1Count: h1s.length, images: imgs.length, imagesWithoutAlt: noAlt.length, words }
+}
+
+/** Site-wide foundations: things only visible across pages, not within one. */
+export function checkAcrossPages(pages, origin) {
+  const findings = []
+  const seen = (key) => {
+    const map = new Map()
+    for (const p of pages) {
+      const v = p.head?.[key]
+      if (!v) continue
+      map.set(v, [...(map.get(v) ?? []), p.url])
+    }
+    return [...map.entries()].filter(([, urls]) => urls.length > 1)
+  }
+  for (const [value, urls] of seen('title')) {
+    findings.push({ level: 'warn', code: 'title-duplicate', message: `${urls.length} pages share the title "${value.slice(0, 50)}"` })
+  }
+  for (const [, urls] of seen('description')) {
+    findings.push({ level: 'warn', code: 'description-duplicate', message: `${urls.length} pages share one meta description` })
+  }
+  // A canonical that points somewhere other than the page it is on is either a
+  // deliberate consolidation or a bug, and it is usually a bug.
+  for (const p of pages) {
+    const c = p.head?.canonical
+    if (!c) continue
+    try {
+      const want = new URL(p.url), got = new URL(c, origin)
+      const norm = (u) => (u.pathname.replace(/\/$/, '') || '/')
+      if (norm(want) !== norm(got)) {
+        findings.push({ level: 'warn', code: 'canonical-mismatch', message: `${p.url} canonicalises to ${c}` })
+      }
+    } catch { /* unparseable canonical is already reported per page */ }
+  }
+  // One consistent term for the category, or the entity signal splits. This is
+  // the advice the scan gives; not checking it here would be incoherent.
+  const langs = new Set(pages.map((p) => p.lang).filter(Boolean))
+  if (langs.size > 1) findings.push({ level: 'warn', code: 'lang-inconsistent', message: `pages declare different langs: ${[...langs].join(', ')}` })
+  return findings
+}
+
 // ── check 4 — does the first paragraph answer? (reports, does not score) ───
 
 export function checkFirstParagraph(html) {
@@ -340,26 +419,47 @@ export async function scanSite(input, opts = {}) {
     const nojs = checkNoJs(res.body)
     const sd = checkStructuredData(res.body)
     const fp = checkFirstParagraph(res.body)
+    const fo = checkFoundations(res.body)
     pages.push({
       url, status: res.status, bytes: res.bytes,
       visibleChars: nojs.visibleChars, hydrationPayload: nojs.hydrationPayload,
       structuredDataTypes: sd.types, head: sd.head, ogCount: Object.keys(sd.og).length,
       h1: fp.h1, firstParagraph: fp.firstParagraph,
-      findings: [...nojs.findings, ...sd.findings, ...fp.findings],
+      lang: fo.lang, hreflang: fo.hreflang, words: fo.words,
+      images: fo.images, imagesWithoutAlt: fo.imagesWithoutAlt, h1Count: fo.h1Count,
+      foundationFindings: fo.findings,
+      answerEngineFindings: [...nojs.findings, ...sd.findings, ...fp.findings],
+      findings: [...fo.findings, ...nojs.findings, ...sd.findings, ...fp.findings],
     })
   }
 
-  const siteFindings = [...robots.findings, ...discovery.findings]
+  const crossPage = checkAcrossPages(pages, origin)
+  const siteFindings = [...robots.findings, ...discovery.findings, ...crossPage]
   const all = [...siteFindings, ...pages.flatMap((p) => p.findings)]
+  // Two sections, reported separately, because the order matters: answer-engine
+  // work layers onto foundations rather than replacing them, and a report that
+  // mixes them invites fixing the interesting half first.
+  const bySection = {
+    foundations: [...crossPage, ...pages.flatMap((p) => p.foundationFindings)],
+    answerEngines: [...robots.findings, ...discovery.findings, ...pages.flatMap((p) => p.answerEngineFindings)],
+  }
   return {
     origin, startedAt, finishedAt: new Date().toISOString(),
     robots: { present: robots.present, sitemaps: robots.sitemaps, agents: robots.agents },
     discovery: discovery.files,
-    siteFindings, pages,
+    siteFindings, pages, bySection,
     summary: {
       pagesScanned: pages.length,
       fail: all.filter((f) => f.level === 'fail').length,
       warn: all.filter((f) => f.level === 'warn').length,
+      foundations: {
+        fail: bySection.foundations.filter((f) => f.level === 'fail').length,
+        warn: bySection.foundations.filter((f) => f.level === 'warn').length,
+      },
+      answerEngines: {
+        fail: bySection.answerEngines.filter((f) => f.level === 'fail').length,
+        warn: bySection.answerEngines.filter((f) => f.level === 'warn').length,
+      },
     },
   }
 }

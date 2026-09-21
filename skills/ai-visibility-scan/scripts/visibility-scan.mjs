@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
- * CLI shell over aeo-engine. Prints a report, writes artefacts, exits non-zero
+ * CLI shell over visibility-engine. Prints a report, writes artefacts, exits non-zero
  * on failures so CI can use it unchanged.
  *
- *   ./aeo-scan.mjs example.com
- *   ./aeo-scan.mjs example.com --json --out ./reports --max-pages 40
- *   ./aeo-scan.mjs a.com b.com --compare
+ *   ./visibility-scan.mjs example.com
+ *   ./visibility-scan.mjs example.com --json --out ./reports --max-pages 40
+ *   ./visibility-scan.mjs a.com b.com --compare
  */
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { scanSite } from './aeo-engine.mjs'
+import { scanSite } from './visibility-engine.mjs'
 
 const argv = process.argv.slice(2)
 if (!argv.length || argv.includes('--help') || argv.includes('-h')) {
-  console.log(`aeo-scan — the four AI-visibility checks, run against a site
+  console.log(`ai-visibility-scan — foundations + answer-engine checks, run against a site
 
-  aeo-scan <domain...> [options]
+  visibility-scan <domain...> [options]
 
   --json              print the full report as JSON
   --out <dir>         write <host>-<date>.json and .md
@@ -43,7 +43,7 @@ const GRN = (s) => (process.stdout.isTTY ? `\x1b[32m${s}\x1b[0m` : s)
 const mark = (l) => (l === 'fail' ? RED('FAIL') : l === 'warn' ? YEL('warn') : GRN('ok'))
 
 function markdown(r) {
-  const L = [`# AEO scan — ${r.origin}`, '', `Scanned ${r.startedAt}. ${r.summary.pagesScanned} pages, **${r.summary.fail} failures**, ${r.summary.warn} warnings.`, '']
+  const L = [`# AI visibility scan — ${r.origin}`, '', `Scanned ${r.startedAt}. ${r.summary.pagesScanned} pages, **${r.summary.fail} failures**, ${r.summary.warn} warnings.`, '']
   L.push('## Site-level', '')
   L.push('| Signal | Result |', '|---|---|')
   L.push(`| robots.txt | ${r.robots.present ? 'present' : 'MISSING'} |`)
@@ -79,6 +79,7 @@ for (const d of domains) {
   console.log(`\n${B(r.origin)}`)
   if (r.error) { console.log(`  ${RED('FAIL')}  ${r.error}`); continue }
   console.log(`  ${r.summary.pagesScanned} pages · ${r.summary.fail} failures · ${r.summary.warn} warnings`)
+  console.log(`  foundations ${r.summary.foundations.fail}F/${r.summary.foundations.warn}W · answer engines ${r.summary.answerEngines.fail}F/${r.summary.answerEngines.warn}W`)
   console.log(`\n  ${B('Site')}`)
   for (const [p, s] of Object.entries(r.discovery)) console.log(`    ${s === 200 ? GRN('ok  ') : RED('FAIL')}  ${p} → ${s}`)
   for (const f of r.siteFindings) console.log(`    ${mark(f.level)}  ${f.code} — ${f.message}`)
@@ -97,9 +98,9 @@ for (const d of domains) {
     mkdirSync(out, { recursive: true })
     const host = new URL(r.origin).host
     const stamp = r.startedAt.slice(0, 10)
-    writeFileSync(join(out, `aeo-scan-${host}-${stamp}.json`), JSON.stringify(r, null, 2))
-    writeFileSync(join(out, `aeo-scan-${host}-${stamp}.md`), markdown(r))
-    console.log(`\n  wrote aeo-scan-${host}-${stamp}.{json,md} to ${out}`)
+    writeFileSync(join(out, `visibility-scan-${host}-${stamp}.json`), JSON.stringify(r, null, 2))
+    writeFileSync(join(out, `visibility-scan-${host}-${stamp}.md`), markdown(r))
+    console.log(`\n  wrote visibility-scan-${host}-${stamp}.{json,md} to ${out}`)
   }
 }
 
