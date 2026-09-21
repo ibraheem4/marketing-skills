@@ -415,7 +415,13 @@ export async function scanSite(input, opts = {}) {
   const pages = []
   for (const url of urls) {
     const res = url === origin + '/' ? home : await get(url, o)
-    if (!res.ok) { pages.push({ url, status: res.status, findings: [{ level: 'warn', code: 'page-unreachable', message: `returned ${res.status || res.error}` }] }); continue }
+    if (!res.ok) {
+      // Every section array must exist even here. Omitting them made flatMap
+      // yield undefined and the summary crash on the next site scanned.
+      const unreachable = [{ level: 'warn', code: 'page-unreachable', message: `returned ${res.status || res.error}` }]
+      pages.push({ url, status: res.status, findings: unreachable, foundationFindings: [], answerEngineFindings: unreachable, head: {} })
+      continue
+    }
     const nojs = checkNoJs(res.body)
     const sd = checkStructuredData(res.body)
     const fp = checkFirstParagraph(res.body)

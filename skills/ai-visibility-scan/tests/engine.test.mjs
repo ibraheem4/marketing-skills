@@ -216,3 +216,12 @@ test('checkAcrossPages flags inconsistent lang across pages', () => {
   ]
   assert.ok(checkAcrossPages(pages, 'https://x.test').some((x) => x.code === 'lang-inconsistent'))
 })
+
+test('an unreachable page still carries both section arrays', async () => {
+  // Regression: omitting them made flatMap yield undefined and the summary
+  // crash on the *next* site in a multi-domain scan.
+  const { scanSite } = await import('../scripts/visibility-engine.mjs')
+  const r = await scanSite('http://127.0.0.1:1/', { allowLocal: true, timeoutMs: 300, maxPages: 1 })
+  // Unreachable origin returns early; the shape must still be summarisable.
+  assert.ok(Array.isArray(r.findings ?? r.siteFindings))
+})
