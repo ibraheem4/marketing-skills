@@ -151,7 +151,9 @@ export async function checkRobots(origin, opts) {
   if (!robots.sitemaps.length) {
     findings.push({ level: 'warn', code: 'sitemap-undeclared', message: 'robots.txt declares no Sitemap:' })
   }
-  return { findings, sitemaps, agents, present: true }
+  // `rules` is returned so the caller can honour robots as well as report on
+  // it. Reporting without honouring is what this tool exists to criticise.
+  return { findings, sitemaps, agents, present: true, rules: robots }
 }
 
 // ── check 2 — does the page exist without JavaScript ───────────────────────
@@ -412,6 +414,25 @@ export async function scanSite(input, opts = {}) {
   }
   urls = [...new Set(urls)].slice(0, o.maxPages)
 
+  // Obey the target's robots.txt for our own fetching.
+  //
+  // The engine reads robots to report on it, which is not the same as honouring
+  // it. A tool that audits AI-crawler access while ignoring the same file is
+  // indefensible, and a prospect reading their own logs would be right to say
+  // so. Disallowed paths are reported as skipped rather than silently dropped,
+  // because "we did not look" and "there was nothing wrong" must not look alike.
+  const skipped = []
+  const robotsRules = robots.rules
+  if (robotsRules) {
+    urls = urls.filter((u) => {
+      let path = '/'
+      try { path = new URL(u).pathname } catch { /* keep it */ }
+      const verdict = isAllowed(robotsRules, o.userAgent, path)
+      if (!verdict.allowed) skipped.push({ url: u, reason: verdict.reason })
+      return verdict.allowed
+    })
+  }
+
   const pages = []
   for (const url of urls) {
     const res = url === origin + '/' ? home : await get(url, o)
@@ -453,6 +474,10 @@ export async function scanSite(input, opts = {}) {
     origin, startedAt, finishedAt: new Date().toISOString(),
     robots: { present: robots.present, sitemaps: robots.sitemaps, agents: robots.agents },
     discovery: discovery.files,
+    // Paths this scan declined to fetch because the target's robots.txt
+    // disallows them. Reported rather than dropped: a clean result on a site we
+    // only half-looked at would read as a clean site.
+    skipped,
     siteFindings, pages, bySection,
     summary: {
       pagesScanned: pages.length,

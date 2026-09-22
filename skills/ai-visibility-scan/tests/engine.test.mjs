@@ -225,3 +225,18 @@ test('an unreachable page still carries both section arrays', async () => {
   // Unreachable origin returns early; the shape must still be summarisable.
   assert.ok(Array.isArray(r.findings ?? r.siteFindings))
 })
+
+test('a disallowed path is skipped, not silently dropped', () => {
+  // The engine must honour robots for its own crawling, not merely report on
+  // it. isAllowed is the filter scanSite applies before fetching each page.
+  const r = parseRobots('User-agent: *\nDisallow: /private\n')
+  const ua = 'Mozilla/5.0 (compatible; ai-visibility-scan/0.2)'
+  assert.equal(isAllowed(r, ua, '/private/report').allowed, false)
+  assert.equal(isAllowed(r, ua, '/pricing').allowed, true)
+})
+
+test('checkRobots hands back the parsed rules so they can be honoured', () => {
+  const r = parseRobots('User-agent: *\nDisallow: /x\n')
+  assert.ok(r.groups.length, 'parsed rules must be usable by isAllowed')
+  assert.equal(isAllowed(r, 'any-agent', '/x').allowed, false)
+})
