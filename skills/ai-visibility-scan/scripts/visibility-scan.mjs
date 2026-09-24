@@ -77,7 +77,7 @@ for (const d of domains) {
   if (has('--json')) { console.log(JSON.stringify(r, null, 2)); continue }
 
   console.log(`\n${B(r.origin)}`)
-  if (r.error) { console.log(`  ${RED('FAIL')}  ${r.error}`); continue }
+  if (r.homeUnreachable) console.log(`  ${RED('FAIL')}  homepage returned ${r.homeUnreachable.status || r.homeUnreachable.error}`)
   console.log(`  ${r.summary.pagesScanned} pages · ${r.summary.fail} failures · ${r.summary.warn} warnings`)
   console.log(`  foundations ${r.summary.foundations.fail}F/${r.summary.foundations.warn}W · answer engines ${r.summary.answerEngines.fail}F/${r.summary.answerEngines.warn}W`)
   console.log(`\n  ${B('Site')}`)

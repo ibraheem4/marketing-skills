@@ -30,6 +30,25 @@ Exit code is 1 when any check fails, so it works unchanged as a CI gate.
 > Node's `fetch` ignores `HTTP_PROXY` by default where `curl` honours it, and
 > the symptom is every domain returning `fetch failed`.
 
+## Calling it from Node
+
+`scanSite(input, opts)` is what the CLI wraps. A service that streams a scan live — this is how
+the lucitra.ai scan works — calls it directly and passes `onEvent`.
+
+| Option | Default | |
+|---|---|---|
+| `maxPages` | `25` | pages fetched past the homepage |
+| `maxSitemaps` | `3` | `Sitemap:` lines from robots.txt that get checked |
+| `deadlineMs` | `20_000` | stop and return what it has |
+| `signal` | — | an `AbortSignal` to cancel early, e.g. a client disconnect |
+| `onEvent` | — | called with `{ type, ms, ... }` as the scan works: `fetch`, `robots`, `agent` (×13, right after `robots`), `page`, `unreachable`. Omit it and the report is identical — events are a side channel, not part of the return value |
+
+The report carries fields beyond the findings: `homeUnreachable` (`null`, or `{ status, error }`
+when the homepage itself failed to load — the report has no separate `error` field), `requests`
+(total fetches made), `stopped` (`'deadline'`, `'aborted'`, or `null`), and
+`robots.sitemapsListed` (how many `Sitemap:` lines robots.txt declared, vs. `robots.sitemaps`,
+the ones actually checked).
+
 ## What it checks
 
 Reported as two sections, and the order is the point: **answer-engine work
@@ -99,11 +118,12 @@ shells and must never be set by an HTTP endpoint taking a stranger's input.
 ## Verification
 
 ```bash
-node --test tests/     # 27 parser tests
+node --test tests/     # parser tests, and scanSite against a local fixture site
 ```
 
-The parsers are tested, not the network paths — a parser that is subtly wrong
-is what produces confident wrong findings. Exercise the network path by running
+The parsers are tested because a parser that is subtly wrong is what produces
+confident wrong findings; `tests/scan.test.mjs` runs the crawl against fixtures
+on 127.0.0.1. Exercise the real network path by running
 the CLI against a real site.
 
 ## Naming

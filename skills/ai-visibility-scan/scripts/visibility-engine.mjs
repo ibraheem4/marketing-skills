@@ -47,6 +47,8 @@ const DEFAULTS = {
   maxBytes: 3_000_000,
   maxRedirects: 5,
   maxPages: 25,
+  maxSitemaps: 3,
+  deadlineMs: 20_000,
   allowLocal: false,
   userAgent: 'Mozilla/5.0 (compatible; ai-visibility-scan/0.2; +https://github.com/ibraheem4/marketing-skills)',
 }
@@ -54,11 +56,13 @@ const DEFAULTS = {
 export async function get(url, opts = {}) {
   const o = { ...DEFAULTS, ...opts }
   assertFetchable(url, { allowLocal: o.allowLocal })
+  if (o.stats) o.stats.requests += 1
   const ac = new AbortController()
   const timer = setTimeout(() => ac.abort(), o.timeoutMs)
+  const signal = o.signal ? AbortSignal.any([ac.signal, o.signal]) : ac.signal
   try {
     const res = await fetch(url, {
-      signal: ac.signal,
+      signal,
       redirect: 'follow',
       headers: { 'user-agent': o.userAgent, accept: '*/*' },
     })
@@ -122,24 +126,44 @@ export function isAllowed(robots, agent, path = '/') {
   return { allowed: best.type === 'allow', reason: `${best.type}: ${best.path}` }
 }
 
+/** A fetch the deadline or an abort cut short is not "missing" or "broken" — it
+ *  was never actually checked, so no finding may claim otherwise. Returns null
+ *  in that case; callers stop rather than record anything for it. */
+async function checkedGet(url, opts) {
+  const res = await get(url, opts)
+  return opts.signal?.aborted ? null : res
+}
+
 export async function checkRobots(origin, opts) {
-  const res = await get(new URL('/robots.txt', origin).href, opts)
   const findings = []
+  const emit = opts.emit ?? (() => {})
+  const res = await checkedGet(new URL('/robots.txt', origin).href, opts)
+  // `status` is what tells "no robots.txt" (4xx, nothing is blocked) from "not
+  // read" (0 for a network failure, 5xx, null when cut short). `agents` is empty
+  // in every one of those, so without it an unread file reads as allow-all.
+  if (!res) return { findings, sitemaps: [], agents: {}, present: false, status: null, sitemapsListed: 0 }
   if (!res.ok) {
     findings.push({ level: 'warn', code: 'robots-missing', message: `/robots.txt returned ${res.status || res.error}` })
-    return { findings, sitemaps: [], agents: {}, present: false }
+    emit({ type: 'robots', status: res.status, sitemaps: 0 })
+    return { findings, sitemaps: [], agents: {}, present: false, status: res.status, sitemapsListed: 0 }
   }
   const robots = parseRobots(res.body)
+  emit({ type: 'robots', status: res.status, sitemaps: robots.sitemaps.length })
   const agents = {}
   for (const a of AI_AGENTS) {
     const v = isAllowed(robots, a)
     agents[a] = v
+    emit({ type: 'agent', name: a, allowed: v.allowed })
     if (!v.allowed) findings.push({ level: 'fail', code: 'bot-blocked', message: `${a} is blocked — ${v.reason}` })
   }
   // A Sitemap: line that 404s is worse than no line: it is a claim that is false.
+  const listed = robots.sitemaps
   const sitemaps = []
-  for (const sm of robots.sitemaps) {
-    const head = await get(sm, opts)
+  for (const sm of listed.slice(0, opts.maxSitemaps ?? DEFAULTS.maxSitemaps)) {
+    if (opts.signal?.aborted) break
+    const head = await checkedGet(sm, opts)
+    if (!head) break
+    emit({ type: 'fetch', path: pathFor(origin, sm), status: head.status })
     sitemaps.push({ url: sm, status: head.status })
     if (!head.ok) {
       findings.push({
@@ -148,12 +172,16 @@ export async function checkRobots(origin, opts) {
       })
     }
   }
-  if (!robots.sitemaps.length) {
+  // nytimes.com lists 25 and took 10.2 s to resolve them all.
+  if (listed.length > sitemaps.length) {
+    findings.push({ level: 'info', code: 'sitemaps-unchecked', message: `${listed.length - sitemaps.length} of ${listed.length} listed sitemaps were not checked` })
+  }
+  if (!listed.length) {
     findings.push({ level: 'warn', code: 'sitemap-undeclared', message: 'robots.txt declares no Sitemap:' })
   }
   // `rules` is returned so the caller can honour robots as well as report on
   // it. Reporting without honouring is what this tool exists to criticise.
-  return { findings, sitemaps, agents, present: true, rules: robots }
+  return { findings, sitemaps, agents, present: true, status: res.status, rules: robots, sitemapsListed: listed.length }
 }
 
 // ── check 2 — does the page exist without JavaScript ───────────────────────
@@ -195,6 +223,15 @@ const attr = (tag, name) => {
   return m ? (m[2] ?? m[3] ?? '') : null
 }
 
+// @type comes from a stranger's page and is echoed back to a browser, so only
+// strings survive, each capped, and a page contributes at most MAX_TYPES.
+const MAX_TYPE_CHARS = 60
+const MAX_TYPES = 5
+const typeNames = (t) => (Array.isArray(t) ? t : [t])
+  .filter((x) => typeof x === 'string')
+  .map((x) => x.trim().slice(0, MAX_TYPE_CHARS))
+  .filter(Boolean)
+
 export function checkStructuredData(html) {
   const findings = []
   const blocks = []
@@ -206,7 +243,7 @@ export function checkStructuredData(html) {
     try {
       const parsed = JSON.parse(raw)
       const items = Array.isArray(parsed) ? parsed : (parsed['@graph'] ?? [parsed])
-      for (const it of items) blocks.push({ valid: true, type: it?.['@type'] ?? null, name: it?.name ?? it?.headline ?? null })
+      for (const it of items) blocks.push({ valid: true, types: typeNames(it?.['@type']), name: it?.name ?? it?.headline ?? null })
     } catch (err) {
       blocks.push({ valid: false, error: String(err.message || err), excerpt: raw.slice(0, 120) })
       // "and where it is malformed" is the promise — so name it, do not just count it.
@@ -244,7 +281,8 @@ export function checkStructuredData(html) {
   else if (head.title.length > 65) findings.push({ level: 'warn', code: 'title-long', message: `<title> is ${head.title.length} chars` })
   if (!head.description) findings.push({ level: 'warn', code: 'description-missing', message: 'no meta description' })
 
-  return { findings, blocks, types: blocks.filter((b) => b.valid).map((b) => b.type), head, og, twitter: tw }
+  const types = blocks.filter((b) => b.valid).flatMap((b) => b.types).slice(0, MAX_TYPES)
+  return { findings, blocks, types, head, og, twitter: tw }
 }
 
 // ── foundations — the SEO layer answer-engine work sits on top of ──────────
@@ -353,8 +391,11 @@ export async function checkDiscoveryFiles(origin, opts) {
     ['/llms.txt', 'llms-txt-missing', 'warn'],
     ['/sitemap.xml', 'sitemap-missing', 'fail'],
   ]) {
-    const res = await get(new URL(path, origin).href, opts)
+    if (opts.signal?.aborted) break
+    const res = await checkedGet(new URL(path, origin).href, opts)
+    if (!res) break
     files[path] = res.status
+    ;(opts.emit ?? (() => {}))({ type: 'fetch', path, status: res.status })
     if (!res.ok) findings.push({ level, code, message: `${path} returned ${res.status || res.error}` })
   }
   return { findings, files }
@@ -370,49 +411,93 @@ export function urlsFromSitemap(xml, limit) {
   return out
 }
 
+// Same-origin fetches report as a path (what a live-stream viewer expects to
+// read); cross-origin ones (a sitemap on another host) report the full URL.
+const pathFor = (origin, url) => {
+  try { const u = new URL(url); return u.origin === origin ? u.pathname + u.search : u.href } catch { return url }
+}
+
 export async function scanSite(input, opts = {}) {
-  const o = { ...DEFAULTS, ...opts }
+  const base = { ...DEFAULTS, ...opts }
   const origin = new URL(/^https?:\/\//.test(input) ? input : `https://${input}`).origin
   const startedAt = new Date().toISOString()
-
-  const home = await get(origin + '/', o)
-  if (!home.ok) {
-    return { origin, startedAt, error: `homepage returned ${home.status || home.error}`, findings: [
-      { level: 'fail', code: 'unreachable', message: `${origin} returned ${home.status || home.error}` },
-    ], pages: [] }
+  const began = Date.now()
+  // A sink that throws (e.g. a closed SSE connection) must not fail the scan —
+  // the scan's job is the report, the event stream is a side channel to it.
+  // Stop emitting after the first throw rather than retrying a broken sink.
+  let eventsLive = true
+  const emit = base.onEvent
+    ? (e) => {
+        if (!eventsLive) return
+        try { base.onEvent({ ...e, ms: Date.now() - began }) } catch { eventsLive = false }
+      }
+    : () => {}
+  const deadline = new AbortController()
+  const timer = setTimeout(() => deadline.abort(), base.deadlineMs)
+  const signal = base.signal ? AbortSignal.any([deadline.signal, base.signal]) : deadline.signal
+  const stats = { requests: 0 }
+  try {
+    const report = await crawl(origin, startedAt, { ...base, signal, stats, emit })
+    let stopped = null
+    if (base.signal?.aborted) stopped = 'aborted'
+    else if (deadline.signal.aborted) stopped = 'deadline'
+    return { ...report, requests: stats.requests, stopped }
+  } finally {
+    clearTimeout(timer)
   }
+}
+
+async function crawl(origin, startedAt, o) {
+  const homeUrl = origin + '/'
+
+  const home = await get(homeUrl, o)
+  // A bot wall on the homepage is not the end of the scan. robots.txt is
+  // usually still served, and for exactly those sites it is the finding that
+  // matters: nytimes.com answered 403 and blocked all thirteen crawlers.
+  const homeUnreachable = home.ok ? null : { status: home.status, error: home.error ?? null }
+  o.emit(homeUnreachable ? { type: 'unreachable', path: '/', status: home.status } : { type: 'fetch', path: '/', status: home.status })
 
   const robots = await checkRobots(origin, o)
   const discovery = await checkDiscoveryFiles(origin, o)
 
   // Prefer the sitemap; fall back to same-origin links from the homepage.
   let urls = []
-  const smUrl = robots.sitemaps.find((s) => s.status === 200)?.url || new URL('/sitemap.xml', origin).href
-  const sm = await get(smUrl, o)
-  if (sm.ok && /<loc>/i.test(sm.body)) urls = urlsFromSitemap(sm.body, o.maxPages)
-  // A sitemap names the canonical origin, which is not where a local or staging
-  // build is being served. Following those URLs silently scans production and
-  // reports the result as if it were the build — so rebase them onto the origin
-  // actually under test.
-  urls = urls.map((u) => {
-    try {
-      const parsed = new URL(u)
-      return parsed.origin === origin ? u : origin + parsed.pathname
-    } catch { return u }
-  })
-  if (!urls.length) {
-    const seen = new Set([origin + '/'])
-    const re = /<a\b[^>]*href\s*=\s*"([^"]+)"/gi
-    let m
-    while ((m = re.exec(home.body)) && seen.size < o.maxPages) {
-      try {
-        const u = new URL(m[1], origin)
-        if (u.origin === origin && !/\.(png|jpe?g|svg|css|js|ico|pdf|xml)$/i.test(u.pathname)) seen.add(u.origin + u.pathname)
-      } catch { /* skip unparseable href */ }
+  if (!homeUnreachable) {
+    const smUrl = robots.sitemaps.find((s) => s.status === 200)?.url || new URL('/sitemap.xml', origin).href
+    const sm = await checkedGet(smUrl, o)
+    // A cut-short fetch here falls through exactly like a missing sitemap — the
+    // link-extraction fallback below runs, and the page loop's own abort guard
+    // stops the rest. No event fires for a request that never completed.
+    if (sm) {
+      o.emit({ type: 'fetch', path: pathFor(origin, smUrl), status: sm.status })
+      if (sm.ok && /<loc>/i.test(sm.body)) urls = urlsFromSitemap(sm.body, o.maxPages)
     }
-    urls = [...seen]
+    // A sitemap names the canonical origin, which is not where a local or staging
+    // build is being served. Following those URLs silently scans production and
+    // reports the result as if it were the build — so rebase them onto the origin
+    // actually under test.
+    urls = urls.map((u) => {
+      try {
+        const parsed = new URL(u)
+        return parsed.origin === origin ? u : origin + parsed.pathname
+      } catch { return u }
+    })
+    if (!urls.length) {
+      const seen = new Set([origin + '/'])
+      const re = /<a\b[^>]*href\s*=\s*"([^"]+)"/gi
+      let m
+      while ((m = re.exec(home.body)) && seen.size < o.maxPages) {
+        try {
+          const u = new URL(m[1], origin)
+          if (u.origin === origin && !/\.(png|jpe?g|svg|css|js|ico|pdf|xml)$/i.test(u.pathname)) seen.add(u.origin + u.pathname)
+        } catch { /* skip unparseable href */ }
+      }
+      urls = [...seen]
+    }
+    // The homepage leads, always. Taking pages[0] from the sitemap labelled a
+    // Guardian music review as the homepage.
+    urls = [...new Set([homeUrl, ...urls])].slice(0, o.maxPages)
   }
-  urls = [...new Set(urls)].slice(0, o.maxPages)
 
   // Obey the target's robots.txt for our own fetching.
   //
@@ -435,12 +520,18 @@ export async function scanSite(input, opts = {}) {
 
   const pages = []
   for (const url of urls) {
-    const res = url === origin + '/' ? home : await get(url, o)
+    if (o.signal.aborted) break
+    // A page fetch the deadline or an abort cut short was never read — it gets
+    // no entry and no event, same as checkedGet's contract elsewhere. Recording
+    // it as page-unreachable claimed we found it broken when we just ran out of time.
+    const res = url === homeUrl ? home : await checkedGet(url, o)
+    if (!res) break
     if (!res.ok) {
       // Every section array must exist even here. Omitting them made flatMap
       // yield undefined and the summary crash on the next site scanned.
       const unreachable = [{ level: 'warn', code: 'page-unreachable', message: `returned ${res.status || res.error}` }]
       pages.push({ url, status: res.status, findings: unreachable, foundationFindings: [], answerEngineFindings: unreachable, head: {} })
+      o.emit({ type: 'page', path: pathFor(origin, url), status: res.status, chars: 0, types: [], notes: ['page-unreachable'] })
       continue
     }
     const nojs = checkNoJs(res.body)
@@ -458,10 +549,18 @@ export async function scanSite(input, opts = {}) {
       answerEngineFindings: [...nojs.findings, ...sd.findings, ...fp.findings],
       findings: [...fo.findings, ...nojs.findings, ...sd.findings, ...fp.findings],
     })
+    o.emit({
+      type: 'page', path: pathFor(origin, url), status: res.status,
+      chars: nojs.visibleChars, types: sd.types,
+      notes: [...nojs.findings, ...sd.findings, ...fp.findings].map((f) => f.code),
+    })
   }
 
   const crossPage = checkAcrossPages(pages, origin)
-  const siteFindings = [...robots.findings, ...discovery.findings, ...crossPage]
+  const unreachable = homeUnreachable
+    ? [{ level: 'fail', code: 'unreachable', message: `${origin} returned ${home.status || home.error}` }]
+    : []
+  const siteFindings = [...unreachable, ...robots.findings, ...discovery.findings, ...crossPage]
   const all = [...siteFindings, ...pages.flatMap((p) => p.findings)]
   // Two sections, reported separately, because the order matters: answer-engine
   // work layers onto foundations rather than replacing them, and a report that
@@ -471,8 +570,8 @@ export async function scanSite(input, opts = {}) {
     answerEngines: [...robots.findings, ...discovery.findings, ...pages.flatMap((p) => p.answerEngineFindings)],
   }
   return {
-    origin, startedAt, finishedAt: new Date().toISOString(),
-    robots: { present: robots.present, sitemaps: robots.sitemaps, agents: robots.agents },
+    origin, startedAt, finishedAt: new Date().toISOString(), homeUnreachable,
+    robots: { present: robots.present, status: robots.status, sitemaps: robots.sitemaps, agents: robots.agents, sitemapsListed: robots.sitemapsListed },
     discovery: discovery.files,
     // Paths this scan declined to fetch because the target's robots.txt
     // disallows them. Reported rather than dropped: a clean result on a site we

@@ -104,6 +104,32 @@ test('checkStructuredData reads @graph, canonical, OG and title', () => {
   assert.equal(r.findings.length, 0)
 })
 
+// @type is echoed to a stranger's browser as page chips, so it is sanitised:
+// strings only, trimmed, capped at 60 characters, at most five per page.
+const ld = (...objs) => objs.map((o) => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('')
+
+test('checkStructuredData drops an object @type', () => {
+  assert.deepEqual(checkStructuredData(ld({ '@type': { evil: 1 } })).types, [])
+})
+
+test('checkStructuredData flattens an array @type', () => {
+  assert.deepEqual(checkStructuredData(ld({ '@type': ['Organization', 'Corp'] })).types, ['Organization', 'Corp'])
+})
+
+test('checkStructuredData keeps only string @type entries, trimmed', () => {
+  const r = checkStructuredData(ld({ '@type': ['  Person ', 7, null, { a: 1 }, ['Nested'], '   '] }, { '@type': 42 }))
+  assert.deepEqual(r.types, ['Person'])
+})
+
+test('checkStructuredData caps each @type at 60 characters', () => {
+  assert.equal(checkStructuredData(ld({ '@type': 'X'.repeat(500) })).types[0].length, 60)
+})
+
+test('checkStructuredData returns at most five types per page', () => {
+  const r = checkStructuredData(ld({ '@graph': ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((t) => ({ '@type': t })) }))
+  assert.deepEqual(r.types, ['A', 'B', 'C', 'D', 'E'])
+})
+
 test('checkStructuredData handles single-quoted attributes', () => {
   const r = checkStructuredData(`<link rel='canonical' href='https://y.test/p'>`)
   assert.equal(r.head.canonical, 'https://y.test/p')
@@ -222,7 +248,8 @@ test('an unreachable page still carries both section arrays', async () => {
   // crash on the *next* site in a multi-domain scan.
   const { scanSite } = await import('../scripts/visibility-engine.mjs')
   const r = await scanSite('http://127.0.0.1:1/', { allowLocal: true, timeoutMs: 300, maxPages: 1 })
-  // Unreachable origin returns early; the shape must still be summarisable.
+  // An unreachable origin no longer returns early — robots.txt and the discovery
+  // files are still tried, and no pages are read. The shape must still be summarisable.
   assert.ok(Array.isArray(r.findings ?? r.siteFindings))
 })
 
