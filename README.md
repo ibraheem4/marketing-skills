@@ -1,3 +1,5 @@
+> **Moved.** This plugin now lives in [`ibraheem4/claude-marketplace` → `plugins/marketing-skills`](https://github.com/ibraheem4/claude-marketplace/tree/main/plugins/marketing-skills), history included. This repo is archived; install with `/plugin install marketing-skills@ibraheem4`.
+
 # Marketing Skills
 
 Marketing and content skills for Claude Code. Companion to [agent-skills](https://github.com/ibraheem4/agent-skills), which covers engineering practice — these cover the writing and the page.
